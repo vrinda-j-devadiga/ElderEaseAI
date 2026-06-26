@@ -6,7 +6,6 @@ import Sidebar from "../components/Sidebar";
 import healthTips from "../data/healthTips";
 import HealthTips from "../components/HealthTips";
 import appointmentsData from "../data/appointments";
-import Appointments from "../components/Appointments";
 import "../styles/Dashboard.css";
 
 
@@ -324,9 +323,6 @@ if (currentHour >= 5 && currentHour < 12) {
 
 </div>
 
-    <Appointments
-  appointments={appointments}
-/>
 
   </div>
 
