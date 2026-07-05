@@ -12,7 +12,7 @@ function Appointments() {
   const [purpose, setPurpose] = useState("");
 
   const [editIndex, setEditIndex] = useState(null);
-
+  const [search, setSearch] = useState("");
   const [appointments, setAppointments] = useState(() => {
     const savedAppointments = localStorage.getItem("appointments");
 
@@ -28,6 +28,41 @@ function Appointments() {
     );
   }, [appointments]);
 
+   useEffect(() => {
+  if ("Notification" in window) {
+    Notification.requestPermission();
+  }
+}, []);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    const now = new Date();
+
+    appointments.forEach((appointment) => {
+      const appointmentTime = new Date(
+        `${appointment.date}T${appointment.time}`
+      );
+
+      const diffMinutes =
+        (appointmentTime - now) / (1000 * 60);
+
+      if (
+  diffMinutes > 0 &&
+  diffMinutes <= 30 &&
+  !appointment.reminderSent
+) {
+        new Notification("📅 ElderEase AI", {
+          body: `Appointment with Dr. ${appointment.doctorName} in ${Math.ceil(diffMinutes)} minutes.`,
+        })
+        appointment.reminderSent = true;
+        setAppointments([...appointments]);;
+      }
+    });
+  }, 60000);
+
+  return () => clearInterval(interval);
+}, [appointments]);
+
   const addAppointment = () => {
     if (
       !doctorName ||
@@ -42,19 +77,34 @@ function Appointments() {
     }
 
     const newAppointment = {
-      doctorName,
-      hospital,
-      title: appointmentTitle,
-      purpose,
-      date: appointmentDate,
-      time: appointmentTime,
-    };
+  doctorName,
+  hospital,
+  title: appointmentTitle,
+  purpose,
+  date: appointmentDate,
+  time: appointmentTime,
+  completed: false,
+  reminderSent: false,
+};
 
     if (editIndex !== null) {
       const updatedAppointments = [...appointments];
       updatedAppointments[editIndex] = newAppointment;
 
       setAppointments(updatedAppointments);
+
+updateActivity(
+  `✅ Completed appointment with ${updatedAppointments[index].doctorName}`
+);
+
+updateActivity(
+  `➕ Added appointment with ${doctorName}`
+);
+
+updateActivity(
+  `✏ Updated appointment with ${doctorName}`
+);
+
       setEditIndex(null);
     } else {
       setAppointments([
@@ -87,6 +137,9 @@ function Appointments() {
   const deleteAppointment = (index) => {
     const updatedAppointments =
       appointments.filter((_, i) => i !== index);
+      updateActivity(
+  `🗑 Deleted appointment with ${appointments[index].doctorName}`
+);
 
     setAppointments(updatedAppointments);
 
@@ -101,6 +154,29 @@ function Appointments() {
     }
   };
 
+  const completeAppointment = (index) => {
+  const updatedAppointments = [...appointments];
+
+  updatedAppointments[index].completed = true;
+
+  setAppointments(updatedAppointments);
+};
+
+const updateActivity = (message) => {
+  const savedActivities =
+    JSON.parse(localStorage.getItem("activities")) || [];
+
+  const updatedActivities = [
+    message,
+    ...savedActivities,
+  ].slice(0, 5);
+
+  localStorage.setItem(
+    "activities",
+    JSON.stringify(updatedActivities)
+  );
+};
+
   return (
     <div className="dashboard">
       <Sidebar />
@@ -113,78 +189,84 @@ function Appointments() {
 
           <h2>➕ Add Appointment</h2>
 
-          <div className="add-medicine">
+  <div className="add-appointment">
 
-            <input
-              type="text"
-              placeholder="Doctor Name"
-              value={doctorName}
-              onChange={(e) =>
-                setDoctorName(e.target.value)
-              }
-            />
+  <input
+    type="text"
+    placeholder="Doctor Name"
+    value={doctorName}
+    onChange={(e) => setDoctorName(e.target.value)}
+  />
 
-            <input
-              type="text"
-              placeholder="Hospital / Clinic"
-              value={hospital}
-              onChange={(e) =>
-                setHospital(e.target.value)
-              }
-            />
+  <input
+    type="text"
+    placeholder="Hospital / Clinic"
+    value={hospital}
+    onChange={(e) => setHospital(e.target.value)}
+  />
 
-            <input
-              type="text"
-              placeholder="Appointment Title"
-              value={appointmentTitle}
-              onChange={(e) =>
-                setAppointmentTitle(e.target.value)
-              }
-            />
+  <input
+    type="text"
+    placeholder="Appointment Title"
+    value={appointmentTitle}
+    onChange={(e) => setAppointmentTitle(e.target.value)}
+  />
 
-            <input
-              type="date"
-              value={appointmentDate}
-              onChange={(e) =>
-                setAppointmentDate(e.target.value)
-              }
-            />
+  <input
+    type="date"
+    value={appointmentDate}
+    onChange={(e) => setAppointmentDate(e.target.value)}
+  />
 
-            <input
-              type="time"
-              value={appointmentTime}
-              onChange={(e) =>
-                setAppointmentTime(e.target.value)
-              }
-            />
+  <input
+    type="time"
+    value={appointmentTime}
+    onChange={(e) => setAppointmentTime(e.target.value)}
+  />
 
-            <input
-              type="text"
-              placeholder="Purpose"
-              value={purpose}
-              onChange={(e) =>
-                setPurpose(e.target.value)
-              }
-            />
+  <input
+    type="text"
+    placeholder="Purpose"
+    value={purpose}
+    onChange={(e) => setPurpose(e.target.value)}
+  />
 
-            <button onClick={addAppointment}>
-              {editIndex !== null
-                ? "Update Appointment"
-                : "Add Appointment"}
-            </button>
+</div>
 
-          </div>
+<div className="add-btn-container">
+  <button
+    className="add-btn"
+    onClick={addAppointment}
+  >
+    {editIndex !== null
+      ? "Update Appointment"
+      : "Add Appointment"}
+  </button>
+</div>
 
         </div>
 
         <div className="section-card">
+ <input
+  className="search-input"
+  type="text"
+  placeholder="🔍 Search Doctor..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+/>
 
           <h2>📅 Upcoming Appointments</h2>
 
           {appointments.length === 0 ? (
             <p>No appointments scheduled.</p>
           ) : (
-            appointments.map((appointment, index) => (
+           appointments
+.filter((appointment) =>
+  `${appointment.doctorName || ""} ${appointment.title || ""}`
+    .toLowerCase()
+    .includes(search.toLowerCase())
+)
+  .map((appointment, index) => ( 
               <div
                 key={index}
                 className="appointment-card"
@@ -221,6 +303,19 @@ function Appointments() {
                   >
                     🗑 Delete
                   </button>
+
+                  {!appointment.completed ? (
+  <button
+    className="complete-btn"
+    onClick={() => completeAppointment(index)}
+  >
+    ✔ Complete
+  </button>
+) : (
+  <span className="completed-badge">
+    ✅ Completed
+  </span>
+)}
 
                 </div>
 

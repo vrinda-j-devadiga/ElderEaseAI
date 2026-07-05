@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaPills, FaCalendarAlt, FaHeartbeat } from "react-icons/fa";
-import StatCard from "../components/StatCard";
+import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import healthTips from "../data/healthTips";
 import HealthTips from "../components/HealthTips";
 import appointmentsData from "../data/appointments";
+
 import "../styles/Dashboard.css";
 
 
@@ -22,6 +22,14 @@ const [activities, setActivities] = useState(() => {
     ? JSON.parse(savedActivities)
     : [];
 });
+
+const profile =
+  JSON.parse(localStorage.getItem("profile")) || {};
+const firstName =
+  profile.fullName
+    ? profile.fullName.split(" ")[0]
+    : "User";
+
 const [appointmentTitle, setAppointmentTitle] = useState("");
 const [appointmentDate, setAppointmentDate] = useState("");
 const [appointmentTime, setAppointmentTime] = useState("");
@@ -75,6 +83,22 @@ const lowStockCount =
 const appointmentCount = appointments.length;
 
 const healthStatus = "Good";
+
+const upcomingAppointments = appointments
+  .filter(
+    (appointment) =>
+      new Date(`${appointment.date}T${appointment.time}`) >= new Date()
+  )
+  .sort(
+    (a, b) =>
+      new Date(`${a.date}T${a.time}`) -
+      new Date(`${b.date}T${b.time}`)
+  );
+
+const nextAppointment =
+  upcomingAppointments.length > 0
+    ? upcomingAppointments[0]
+    : null;
 
 const totalMedicines = medicines.length;
 
@@ -140,197 +164,282 @@ if (currentHour >= 5 && currentHour < 12) {
 
       <div className="dashboard-content">
 
-        <div className="welcome-banner">
+       <div className="welcome-banner">
 
- <h1>{greeting}, Vrinda 👋</h1>
+  <h1>{greeting}, {firstName} 👋</h1>
 
-  <h3>Today's Summary</h3>
+<p className="welcome-text">
+    Welcome back! Here's your health overview for today.
+</p>
 
   <div className="summary-grid">
 
-   <div
-  className="summary-box"
-  onClick={() => navigate("/medicines")}
->
-      💊
-      <h2>{remainingMedicines}</h2>
-      <p>💊 Left Today</p>
+    <div
+      className="summary-box"
+      onClick={() => navigate("/medicines")}
+    >
+
+      <div className="icon">💊</div>
+
+<h2>{remainingMedicines}</h2>
+
+<p>Medicines Left</p>
+      
     </div>
 
+    <div
+      className="summary-box"
+      onClick={() => navigate("/appointments")}
+    >
+        <div className="icon">📅</div>
+      <h2>{appointmentCount}</h2>
+      <p>Appointments</p>
+    </div>
+
+    <div
+      className="summary-box"
+      onClick={() => navigate("/medicines")}
+    >
+      
+  <div className="icon">⚠️</div>
+
+      <h2>{lowStockCount}</h2>
+      <p>Low Stock</p>
+    </div>
+
+    <div className="summary-box">
+       <div className="icon">📈</div>
+      <h2>{progress}%</h2>
+      <p>Today's Progress</p>
+    </div>
+
+  </div>
+
+<p className="daily-message">
+    {remainingMedicines === 0
+        ? "🎉 Excellent! You've completed today's medicines."
+        : `💚 Keep taking your medicines on time. ${remainingMedicines} remaining today.`}
+</p>
+
+</div>
+
+<div className="dashboard-top">
+
+  <div className="section-card">
+
+    <h2>💊 Today's Medicines</h2>
+
+    <p className="section-subtitle">
+Take your medicines on time for better health.
+</p>
+
+    {medicines.length === 0 ? (
+
+      <p>No medicines added yet.</p>
+
+    ) : (
+
+      medicines.slice(0,4).map((medicine,index)=>(
+
+       <div className="medicine-row" key={index}>
+
+  <div className="medicine-info">
+
+    <div className="medicine-icon">
+      💊
+    </div>
+
+    <div>
+
+      <h4>{medicine.name}</h4>
+
+      <p>Scheduled Medicine</p>
+
+    </div>
+
+  </div>
+
+  <span className="time-badge">
+    🕒 {medicine.time}
+  </span>
+
+</div>
+
+      ))
+
+    )}
+
+  </div>
+
+
+  <div className="section-card">
+
+  <h2>📅 Next Appointment</h2>
+
+{nextAppointment ? (
+  <>
+    <p className="appointment-subtitle">
+      Your upcoming doctor visit.
+    </p>
+
+    <div className="appointment-card">
+      ...
+    </div>
+  </>
+) : (
   <div
-  className="summary-box"
+  className="no-appointment"
   onClick={() => navigate("/appointments")}
 >
-      📅
-      <h2>{appointmentCount}</h2>
-      <p>📅 Upcoming</p>
-    </div>
 
-   <div
-  className="summary-box"
-  onClick={() => navigate("/medicines")}
->
-      ⚠
-      <h2>{lowStockCount}</h2>
-      <p>⚠ Low Stock</p>
-    </div>
+    <div className="empty-icon-circle">
+    <div className="empty-icon">📅</div>
+</div>
+
+    <h3>No Upcoming Appointments</h3>
+
+    <p>You're all caught up. Enjoy your day!</p>
 
   </div>
+)}
 
-   <p className="daily-message">
-  {lowStockCount > 0
-    ? `⚠ ${lowStockCount} medicine(s) are running low.`
-    : remainingMedicines === 0
-    ? "🎉 Great job! You've completed today's medicines."
-    : `💊 ${remainingMedicines} medicine(s) remaining today.`}
-</p>
-
-</div>
-
- <div className="progress-card">
-
-  <h2>📊 Today's Progress</h2>
-
-  <div className="progress-container">
-    <div
-      className="progress-fill"
-      style={{
-        width: `${progress}%`
-      }}
-    ></div>
   </div>
-
-  <p className="progress-percent">
-  {progress}%
-</p>
-
-<p className="progress-text">
-  {progress === 100
-    ? "🎉 Great job! You've completed today's medicines."
-    : `💊 You've taken ${takenMedicines} of ${totalMedicines} medicines today.`}
-</p>
-
-</div>
-
-        <div className="stats-container">
-
-<StatCard
-  icon={<FaPills />}
-  title="Medicines Today"
-  value={medicineCount}
-/>
-
-<StatCard
-  icon={<FaCalendarAlt />}
-  title="Appointments"
-  value={appointmentCount}
-/>
-
-<StatCard
-  icon={<FaHeartbeat />}
-  title="Health Status"
-  value={healthStatus}
-/>
-
-</div>
-
-<div className="alert-container">
-
-  {healthStatus === "Good" && (
-    <div className="alert-success">
-      ✅ Your health status looks good today!
-    </div>
-  )}
-
-  {appointments.length > 0 && (
-    <div className="alert-info">
-      📅 You have upcoming appointments.
-    </div>
-  )}
 
 </div>
      
-
 <div className="section-card">
 
-  <h2>📅 Add Appointment</h2>
+  <h2>⚡ Quick Actions</h2>
 
-  <div className="add-medicine">
+  <div className="quick-actions">
 
-    <input
-      type="text"
-      placeholder="Appointment Title"
-      value={appointmentTitle}
-      onChange={(e) =>
-        setAppointmentTitle(e.target.value)
-      }
-    />
+     <div className="action-card" onClick={() => navigate("/medicines")}>
 
-    <input
-      type="date"
-      value={appointmentDate}
-      onChange={(e) =>
-        setAppointmentDate(e.target.value)
-      }
-    />
+   <div className="action-icon-circle">
+    <div className="action-icon">💊</div>
+</div>
 
-    <input
-      type="time"
-      value={appointmentTime}
-      onChange={(e) =>
-        setAppointmentTime(e.target.value)
-      }
-    />
+    <h3>Medicines</h3>
 
-    <button onClick={addAppointment}>
-      Add Appointment
-    </button>
+    <p>Manage your medicines</p>
 
+    </div>
+
+    <div
+  className="action-card"
+  onClick={() => navigate("/appointments")}
+>
+
+    <div className="action-icon-circle">
+    <div className="action-icon">📅</div>
+</div>
+
+    <h3>Appointments</h3>
+
+    <p>View appointments</p>
+
+</div>
+
+    <div
+  className="action-card"
+  onClick={() => navigate("/ai")}
+>
+
+    <div className="action-icon-circle">
+    <div className="action-icon">🤖</div>
+</div>
+
+    <h3>AI Assistant</h3>
+
+    <p>Ask health questions</p>
+
+</div>
+
+   <div
+  className="action-card"
+  onClick={() => navigate("/reports")}
+>
+
+  <div className="action-icon-circle">
+    <div className="action-icon">📄</div>
+</div>
+
+    <h3>Reports</h3>
+
+    <p>View health reports</p>
+
+</div>
   </div>
 
 </div>
 
 <div className="dashboard-layout">
 
-  <div className="left-column">
-
-  </div>
-
-  <div className="right-column">
-
     <HealthTips tips={healthTips} />
 
     <div className="section-card">
 
-  <h2>📋 Recent Activity</h2>
+        <h2>📋 Recent Activity</h2>
 
-  {activities.length === 0 ? (
-    <p>No recent activity.</p>
-  ) : (
-    activities.map((activity, index) => (
-  <div
-  key={index}
-  className={`activity-item ${
-    activity.includes("Deleted")
-      ? "delete-activity"
-      : "add-activity"
-  }`}
->
-  {activity}
-</div>
-))
-  )}
+   {activities.length === 0 ? (
 
-</div>
+  <div className="empty-activity">
 
+    <div className="activity-empty-icon">📋</div>
+
+    <p>No recent activity yet.</p>
 
   </div>
+
+) : (
+
+  activities.map((activity, index) => (
+
+    <div
+      key={index}
+      className={`activity-item ${
+        activity.includes("Deleted")
+          ? "delete-activity"
+          : "add-activity"
+      }`}
+    >
+
+      <div className="activity-left">
+
+        <div className="activity-icon">
+
+          {activity.includes("Deleted")
+            ? "🗑️"
+            : activity.includes("Refilled")
+            ? "🔄"
+            : activity.includes("Took")
+            ? "✅"
+            : "➕"}
+
+        </div>
+
+        <span>{activity}</span>
+
+      </div>
+
+      <span className="activity-time">
+        Today
+      </span>
+
+    </div>
+
+  ))
+
+)}
+
+    </div>
+
+</div>
 
 </div>
 
       </div>
 
-    </div>
     );
 }
 

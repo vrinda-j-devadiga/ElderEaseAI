@@ -48,6 +48,10 @@ const completedDuration = today - start;
 
 let progress = 0;
 
+if (!medicine.startDate || !medicine.endDate) {
+  progress = 0;
+}
+
 if (today <= start) {
   progress = 0;
 } else if (today >= end) {
@@ -113,13 +117,29 @@ if (today <= start) {
   {progress}% Treatment Completed
 </p>
 
+
 <button
   className="taken-btn"
   onClick={() => markAsTaken(index)}
-  disabled={medicine.quantity === 0}
+  disabled={
+    medicine.quantity === 0 ||
+    (
+      medicine.lastTakenDate ===
+      new Date().toISOString().split("T")[0] &&
+      medicine.takenCount >= medicine.timesPerDay
+    )
+  }
 >
-  ✔ Taken
+  {(
+    medicine.lastTakenDate ===
+    new Date().toISOString().split("T")[0] &&
+    medicine.takenCount >= medicine.timesPerDay
+  )
+    ? `✅ Completed (${medicine.timesPerDay}/${medicine.timesPerDay})`
+    : `✔ Taken (${medicine.takenCount || 0}/${medicine.timesPerDay || 1})`}
 </button>
+
+
 {medicine.quantity === 0 && (
   <button
     className="refill-btn"

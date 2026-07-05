@@ -11,6 +11,7 @@ function Medicines() {
   const [startDate, setStartDate] = useState("");
 const [endDate, setEndDate] = useState("");
 const [quantity, setQuantity] = useState("");
+const [timesPerDay, setTimesPerDay] = useState(1);
 const [editIndex, setEditIndex] = useState(null);
 
   const [medicines, setMedicines] = useState(() => {
@@ -30,8 +31,8 @@ const [editIndex, setEditIndex] = useState(null);
   setMedicines(updatedMedicines);
 
   updateActivity(
-  `🗑 Deleted ${medicines[index].name}`
-);
+    `🗑 Deleted ${medicines[index].name}`
+  );
 
 };
 
@@ -43,19 +44,41 @@ const editMedicine = (index) => {
   setStartDate(medicine.startDate);
   setEndDate(medicine.endDate);
   setQuantity(medicine.quantity);
+  setTimesPerDay(medicine.timesPerDay || 1);
 
   setEditIndex(index);
 };
 
 
 const markAsTaken = (index) => {
+
   const updatedMedicines = [...medicines];
 
+  const today = new Date().toISOString().split("T")[0];
+
+  // Reset count if it's a new day
+  if (updatedMedicines[index].lastTakenDate !== today) {
+    updatedMedicines[index].takenCount = 0;
+    updatedMedicines[index].lastTakenDate = today;
+  }
+
+  // Stop if today's limit is reached
+  if (
+    updatedMedicines[index].takenCount >=
+    updatedMedicines[index].timesPerDay
+  ) {
+    return;
+  }
+
+  // Count this dose
+  updatedMedicines[index].takenCount++;
+
+  // Reduce stock
   if (updatedMedicines[index].quantity > 0) {
-  updatedMedicines[index].quantity--;
-}
+    updatedMedicines[index].quantity--;
+  }
 
-
+  // Low stock notification
   if (
     updatedMedicines[index].quantity <= 5 &&
     updatedMedicines[index].quantity > 0 &&
@@ -68,7 +91,8 @@ const markAsTaken = (index) => {
     updatedMedicines[index].lowStockNotified = true;
   }
 
-    if (updatedMedicines[index].quantity === 0) {
+  // Out of stock notification
+  if (updatedMedicines[index].quantity === 0) {
     new Notification("💊 ElderEase AI", {
       body: `${updatedMedicines[index].name} is out of stock.\nPlease refill it.`
     });
@@ -80,12 +104,11 @@ const markAsTaken = (index) => {
 
   setMedicines(updatedMedicines);
 
- if (updatedMedicines[index].quantity > 0) {
   updateActivity(
-    `✔ Took ${updatedMedicines[index].name}`
+    `✔ Took ${updatedMedicines[index].name} (${updatedMedicines[index].takenCount}/${updatedMedicines[index].timesPerDay})`
   );
-}
 };
+
 const refillMedicine = (index) => {
   const updatedMedicines = [...medicines];
 
@@ -98,6 +121,8 @@ const refillMedicine = (index) => {
     `🔄 Refilled ${updatedMedicines[index].name}`
   );
 };
+
+const [search, setSearch] = useState("");
 
   useEffect(() => {
     localStorage.setItem(
@@ -152,15 +177,17 @@ const addMedicine = () => {
     return;
   }
 
-  const medicineData = {
-    name: medicineName,
-    time: medicineTime,
-    taken: false,
-    quantity: Number(quantity),
-    startDate,
-    endDate,
-    lowStockNotified: false
-  };
+ const medicineData = {
+  name: medicineName,
+  time: medicineTime,
+  timesPerDay,
+  takenCount: 0,
+  lastTakenDate: "",
+  quantity: Number(quantity),
+  startDate,
+  endDate,
+  lowStockNotified: false
+};
 
   if (editIndex !== null) {
 
@@ -188,6 +215,7 @@ const addMedicine = () => {
   setStartDate("");
   setEndDate("");
   setQuantity("");
+  setTimesPerDay(1);
 };
   const getNextReminder = () => {
   const now = new Date();
@@ -287,27 +315,49 @@ const getDueSoonMedicine = () => {
 
       <div className="dashboard-content">
 
-        <h1>💊 Medicines</h1>
+  <div className="page-header">
+    <h1>💊 Medicines</h1>
+    <p>Manage your medicines and never miss a dose.</p>
+  </div>
 
-        <div className="reminder-card">
+  <div className="reminder-card">
+
+  <h2>⏰ Next Reminder</h2>
 
   {nextReminder ? (
-    <>
-      <h2>⏰ Next Reminder</h2>
+
+    <div className="reminder-content">
+
+      <div className="reminder-icon">
+        💊
+      </div>
 
       <h3>{nextReminder.name}</h3>
 
-      <p>
-        Today • {formatTime(nextReminder.time)}
+      <p className="reminder-time">
+        🕒 Today • {formatTime(nextReminder.time)}
       </p>
 
-      <span>Next medicine due</span>
-    </>
+      <span className="reminder-text">
+        Next medicine due
+      </span>
+
+    </div>
+
   ) : (
-    <>
-      <h2>⏰ Next Reminder</h2>
-      <p>No upcoming medicines today.</p>
-    </>
+
+    <div className="no-reminder">
+
+      <div className="reminder-icon">
+        💊
+      </div>
+
+      <h3>No Medicines Remaining</h3>
+
+      <p>You're all caught up for today!</p>
+
+    </div>
+
   )}
 
 </div>
@@ -343,25 +393,23 @@ const getDueSoonMedicine = () => {
               }
             />
 
-            <button onClick={addMedicine}>
-  {editIndex !== null ? "Update Medicine" : "Add Medicine"}
-</button>
+<div className="date-field">
+  <label>Start Date</label>
+  <input
+    type="date"
+    value={startDate}
+    onChange={(e)=>setStartDate(e.target.value)}
+  />
+</div>
 
-            <input
-  type="date"
-  value={startDate}
-  onChange={(e) =>
-    setStartDate(e.target.value)
-  }
-/>
-
-<input
-  type="date"
-  value={endDate}
-  onChange={(e) =>
-    setEndDate(e.target.value)
-  }
-/>
+<div className="date-field">
+  <label>End Date</label>
+  <input
+    type="date"
+    value={endDate}
+    onChange={(e)=>setEndDate(e.target.value)}
+  />
+</div>
 
 <input
   type="number"
@@ -372,10 +420,41 @@ const getDueSoonMedicine = () => {
   }
 />
 
+  <select
+    className="times-select"
+    value={timesPerDay}
+    onChange={(e)=>setTimesPerDay(Number(e.target.value))}
+  >
+    <option value={1}>1 Time / Day</option>
+    <option value={2}>2 Times / Day</option>
+    <option value={3}>3 Times / Day</option>
+    <option value={4}>4 Times / Day</option>
+  </select>
+
+</div>
+
+<div className="add-btn-container">
+  <button
+    className="add-btn"
+    onClick={addMedicine}
+  >
+    {editIndex !== null ? "Update Medicine" : "Add Medicine"}
+  </button>
           </div>
 
+<input
+  className="search-input"
+  type="text"
+  placeholder="🔍 Search medicine..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+/>
          <MedicineList
-  medicines={medicines}
+  medicines={medicines.filter((medicine) =>
+  medicine.name
+    .toLowerCase()
+    .includes(search.toLowerCase())
+)}
   deleteMedicine={deleteMedicine}
   markAsTaken={markAsTaken}
   editMedicine={editMedicine}

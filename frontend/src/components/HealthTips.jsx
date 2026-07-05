@@ -1,12 +1,19 @@
 function HealthTips({ tips }) {
+  const icons = ["💧", "🚶", "😴", "🥗"];
+
   return (
-    <div className="section-card">
+    <div className="section-card health-tips-card">
 
       <h2>🌿 Health Tips</h2>
 
-      {tips.map((tip, index) => (
-        <p key={index}>{tip}</p>
-      ))}
+      <div className="tips-list">
+        {tips.map((tip, index) => (
+          <div className="tip-item" key={index}>
+            <span className="tip-icon">{icons[index] || "🌿"}</span>
+            <span>{tip}</span>
+          </div>
+        ))}
+      </div>
 
     </div>
   );
