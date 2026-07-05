@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
+import API from "../api/axios";
 import Sidebar from "../components/Sidebar";
-import medicinesData from "../data/medicines";
 import MedicineList from "../components/MedicineList";
 
 
@@ -13,27 +13,52 @@ const [endDate, setEndDate] = useState("");
 const [quantity, setQuantity] = useState("");
 const [timesPerDay, setTimesPerDay] = useState(1);
 const [editIndex, setEditIndex] = useState(null);
+const [medicines, setMedicines] = useState([]);
 
-  const [medicines, setMedicines] = useState(() => {
-    const savedMedicines =
-      localStorage.getItem("medicines");
+useEffect(() => {
+  fetchMedicines();
+}, []);
 
-    return savedMedicines
-      ? JSON.parse(savedMedicines)
-      : medicinesData;
-  });
+const fetchMedicines = async () => {
+  try {
+    const token = localStorage.getItem("token");
 
-  const deleteMedicine = (index) => {
+    const res = await API.get("/medicines", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  const updatedMedicines =
-    medicines.filter((_, i) => i !== index);
+    setMedicines(res.data);
+  }  catch (error) {
+  console.error("GET MEDICINES ERROR:");
+  console.error(error);
+}
+};
 
-  setMedicines(updatedMedicines);
+const deleteMedicine = async (index) => {
+  try {
 
-  updateActivity(
-    `🗑 Deleted ${medicines[index].name}`
-  );
+    const token = localStorage.getItem("token");
 
+    await API.delete(
+      `/medicines/${medicines[index]._id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    fetchMedicines();
+
+    updateActivity(
+      `🗑 Deleted ${medicines[index].name}`
+    );
+
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const editMedicine = (index) => {
@@ -56,13 +81,13 @@ const markAsTaken = (index) => {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Reset count if it's a new day
+
   if (updatedMedicines[index].lastTakenDate !== today) {
     updatedMedicines[index].takenCount = 0;
     updatedMedicines[index].lastTakenDate = today;
   }
 
-  // Stop if today's limit is reached
+
   if (
     updatedMedicines[index].takenCount >=
     updatedMedicines[index].timesPerDay
@@ -124,12 +149,12 @@ const refillMedicine = (index) => {
 
 const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    localStorage.setItem(
-      "medicines",
-      JSON.stringify(medicines)
-    );
-  }, [medicines]);
+  // useEffect(() => {
+  //   localStorage.setItem(
+  //     "medicines",
+  //     JSON.stringify(medicines)
+  //   );
+  // }, [medicines]);
 
 useEffect(() => {
   if ("Notification" in window) {
@@ -164,8 +189,7 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, [medicines]);
 
-const addMedicine = () => {
-
+const addMedicine = async () => {
   if (
     !medicineName ||
     !medicineTime ||
@@ -177,46 +201,66 @@ const addMedicine = () => {
     return;
   }
 
- const medicineData = {
-  name: medicineName,
-  time: medicineTime,
-  timesPerDay,
-  takenCount: 0,
-  lastTakenDate: "",
-  quantity: Number(quantity),
-  startDate,
-  endDate,
-  lowStockNotified: false
-};
+  try {
+    const token = localStorage.getItem("token");
 
-  if (editIndex !== null) {
+    const medicineData = {
+      name: medicineName,
+      dosage: "",
+      frequency: `${timesPerDay} Times / Day`,
+      time: medicineTime,
+      startDate,
+      endDate,
+      quantity: Number(quantity),
+      timesPerDay,
+    };
 
-    const updatedMedicines = [...medicines];
-    updatedMedicines[editIndex] = medicineData;
+    if (editIndex !== null) {
 
-    setMedicines(updatedMedicines);
+      await API.put(
+        `/medicines/${medicines[editIndex]._id}`,
+        medicineData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    updateActivity(`✏ Updated ${medicineName}`);
+      updateActivity(`✏ Updated ${medicineName}`);
 
-    setEditIndex(null);
+      setEditIndex(null);
 
-  } else {
+    } else {
 
-    setMedicines([
-      ...medicines,
-      medicineData
-    ]);
+      await API.post(
+        "/medicines",
+        medicineData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    updateActivity(`➕ Added ${medicineName}`);
+      updateActivity(`➕ Added ${medicineName}`);
+    }
+
+    fetchMedicines();
+
+    setMedicineName("");
+    setMedicineTime("");
+    setStartDate("");
+    setEndDate("");
+    setQuantity("");
+    setTimesPerDay(1);
+
+  } catch (error) {
+    console.log(error);
+    alert("Failed to save medicine");
   }
-
-  setMedicineName("");
-  setMedicineTime("");
-  setStartDate("");
-  setEndDate("");
-  setQuantity("");
-  setTimesPerDay(1);
 };
+
   const getNextReminder = () => {
   const now = new Date();
 
