@@ -83,6 +83,15 @@ medicine.quantity = req.body.quantity ?? medicine.quantity;
 medicine.timesPerDay = req.body.timesPerDay ?? medicine.timesPerDay;
 medicine.status = req.body.status ?? medicine.status;
 
+medicine.takenCount =
+  req.body.takenCount ?? medicine.takenCount;
+
+medicine.lastTakenDate =
+  req.body.lastTakenDate ?? medicine.lastTakenDate;
+
+medicine.lowStockNotified =
+  req.body.lowStockNotified ?? medicine.lowStockNotified;
+
     const updatedMedicine = await medicine.save();
 
     res.status(200).json({

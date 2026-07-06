@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import healthTips from "../data/healthTips";
 import HealthTips from "../components/HealthTips";
-import appointmentsData from "../data/appointments";
+import API from "../api/axios";
 
 import "../styles/Dashboard.css";
 
@@ -23,26 +22,39 @@ const [activities, setActivities] = useState(() => {
     : [];
 });
 
-const profile =
-  JSON.parse(localStorage.getItem("profile")) || {};
+const user =
+  JSON.parse(localStorage.getItem("user")) || {};
+
 const firstName =
-  profile.fullName
-    ? profile.fullName.split(" ")[0]
+  user.name
+    ? user.name.split(" ")[0]
     : "User";
 
-const [appointmentTitle, setAppointmentTitle] = useState("");
-const [appointmentDate, setAppointmentDate] = useState("");
-const [appointmentTime, setAppointmentTime] = useState("");
+const [appointments, setAppointments] = useState([]);
 
-const [appointments, setAppointments] = useState(() => {
-  const savedAppointments =
-    localStorage.getItem("appointments");
+useEffect(() => {
+  const fetchDashboardData = async () => {
+    try {
+      const [medicineRes, appointmentRes] = await Promise.all([
+        API.get("/medicines"),
+        API.get("/appointments"),
+      ]);
 
-  return savedAppointments
-    ? JSON.parse(savedAppointments)
-    : appointmentsData;
-});
+      setMedicines(medicineRes.data);
+      setAppointments(appointmentRes.data);
 
+    } catch (error) {
+  console.error("Failed to fetch dashboard data:", error);
+
+  alert(
+    error.response?.data?.message ||
+    "Failed to load dashboard."
+  );
+}
+  };
+
+  fetchDashboardData();
+}, []);
 
 useEffect(() => {
   localStorage.setItem(
@@ -57,21 +69,11 @@ useEffect(() => {
   }
 }, []);
 
+const [medicines, setMedicines] = useState([]);
 
-useEffect(() => {
-  localStorage.setItem(
-    "appointments",
-    JSON.stringify(appointments)
-  );
-}, [appointments]);
-
-const medicines =
-  JSON.parse(localStorage.getItem("medicines")) || [];
-
-const medicineCount = medicines.length;
-
-const remainingMedicines =
-  medicines.filter((medicine) => !medicine.taken).length;
+const remainingMedicines = medicines.filter(
+  (medicine) => medicine.status !== "Completed"
+).length;
 
 const lowStockCount =
   medicines.filter(
@@ -102,49 +104,18 @@ const nextAppointment =
 
 const totalMedicines = medicines.length;
 
-const takenMedicines =
-  medicines.filter(
-    (medicine) => medicine.quantity < 30
-  ).length;
+const completedMedicines = medicines.filter(
+  (medicine) => medicine.status === "Completed"
+).length;
 
 const progress =
   totalMedicines === 0
     ? 0
     : Math.round(
-        (takenMedicines / totalMedicines) * 100
+        (completedMedicines / totalMedicines) * 100
       );
 
-const addAppointment = () => {
 
-  if (
-    !appointmentTitle ||
-    !appointmentDate ||
-    !appointmentTime
-  ) {
-    alert("Please fill all fields");
-    return;
-  }
-
-  const newAppointment = {
-    title: appointmentTitle,
-    date: appointmentDate,
-    time: appointmentTime
-  };
-
-  setAppointments([
-    ...appointments,
-    newAppointment
-  ]);
-
-  setActivities(prev => [
-    `📅 Added appointment: ${appointmentTitle}`,
-    ...prev
-  ].slice(0, 5));
-
-  setAppointmentTitle("");
-  setAppointmentDate("");
-  setAppointmentTime("");
-};
 const currentHour = new Date().getHours();
 
 let greeting = "🌙 Good Night";
@@ -241,7 +212,7 @@ Take your medicines on time for better health.
 
       medicines.slice(0,4).map((medicine,index)=>(
 
-       <div className="medicine-row" key={index}>
+       <div className="medicine-row" key={medicine._id}>
 
   <div className="medicine-info">
 
@@ -253,7 +224,7 @@ Take your medicines on time for better health.
 
       <h4>{medicine.name}</h4>
 
-      <p>Scheduled Medicine</p>
+      <p>{medicine.dosage}</p>
 
     </div>
 
@@ -283,8 +254,38 @@ Take your medicines on time for better health.
     </p>
 
     <div className="appointment-card">
-      ...
-    </div>
+
+  <h3>👨‍⚕️ {nextAppointment.doctorName}</h3>
+
+  <p>
+    <strong>🏥 Hospital:</strong>{" "}
+    {nextAppointment.hospital}
+  </p>
+
+  <p>
+    <strong>🩺 Department:</strong>{" "}
+    {nextAppointment.department}
+  </p>
+
+  <p>
+    <strong>📅 Date:</strong>{" "}
+    {nextAppointment.date}
+  </p>
+
+  <p>
+    <strong>🕒 Time:</strong>{" "}
+    {nextAppointment.time}
+  </p>
+
+  {nextAppointment.notes && (
+    <p>
+      <strong>📝 Notes:</strong>{" "}
+      {nextAppointment.notes}
+    </p>
+  )}
+
+</div>
+
   </>
 ) : (
   <div
@@ -396,7 +397,7 @@ Take your medicines on time for better health.
   activities.map((activity, index) => (
 
     <div
-      key={index}
+     key={index}
       className={`activity-item ${
         activity.includes("Deleted")
           ? "delete-activity"
@@ -408,13 +409,17 @@ Take your medicines on time for better health.
 
         <div className="activity-icon">
 
-          {activity.includes("Deleted")
-            ? "🗑️"
-            : activity.includes("Refilled")
-            ? "🔄"
-            : activity.includes("Took")
-            ? "✅"
-            : "➕"}
+         {activity.includes("Deleted")
+  ? "🗑️"
+  : activity.includes("Updated")
+  ? "✏️"
+  : activity.includes("Completed")
+  ? "✅"
+  : activity.includes("Refilled")
+  ? "🔄"
+  : activity.includes("Added")
+  ? "➕"
+  : "📌"}
 
         </div>
 

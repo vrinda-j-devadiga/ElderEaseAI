@@ -1,14 +1,36 @@
 import Sidebar from "../components/Sidebar";
+import { useState, useEffect } from "react";
+import API from "../api/axios";
 
 function Statistics() {
-  const medicines =
-    JSON.parse(localStorage.getItem("medicines")) || [];
+const [medicines, setMedicines] = useState([]);
+const [appointments, setAppointments] = useState([]);
 
-  const appointments =
-    JSON.parse(localStorage.getItem("appointments")) || [];
+useEffect(() => {
+  const fetchStatistics = async () => {
+    try {
+      const [medicineRes, appointmentRes] =
+        await Promise.all([
+          API.get("/medicines"),
+          API.get("/appointments"),
+        ]);
 
-  const profile =
-    JSON.parse(localStorage.getItem("profile")) || {};
+      setMedicines(medicineRes.data);
+      setAppointments(appointmentRes.data);
+
+    } catch (error) {
+      console.error(
+        "Failed to fetch statistics:",
+        error
+      );
+    }
+  };
+
+  fetchStatistics();
+}, []);
+
+const user =
+  JSON.parse(localStorage.getItem("user")) || {};
 
   const totalMedicines = medicines.length;
 
@@ -18,12 +40,17 @@ function Statistics() {
 
   const totalAppointments = appointments.length;
 
-  const completedAppointments = appointments.filter(
-    (appointment) => appointment.completed
+ const completedAppointments =
+  appointments.filter(
+    (appointment) =>
+      appointment.status === "Completed"
   ).length;
 
-  const upcomingAppointments =
-    totalAppointments - completedAppointments;
+const upcomingAppointments =
+  appointments.filter(
+    (appointment) =>
+      appointment.status === "Upcoming"
+  ).length;
 
   const healthScore = Math.min(
     100,
@@ -83,13 +110,26 @@ function Statistics() {
         <div className="section-card">
           <h2>👤 Profile Summary</h2>
 
-         <p>👤 <strong>Name:</strong> {profile.fullName || "Not Added"}</p>
+       <p>
+  👤 <strong>Name:</strong> {user.name || "Not Added"}
+</p>
 
-<p>🎂 <strong>Age:</strong> {profile.age || "-"} Years</p>
+<p>
+  📧 <strong>Email:</strong> {user.email || "-"}
+</p>
 
-<p>🩸 <strong>Blood Group:</strong> {profile.bloodGroup || "-"}</p>
+<p>
+  🎂 <strong>Age:</strong> -
+</p>
 
-<p>⚖️ <strong>Weight:</strong> {profile.weight || "-"} kg</p>
+<p>
+  🩸 <strong>Blood Group:</strong> -
+</p>
+
+<p>
+  ⚖️ <strong>Weight:</strong> -
+</p>
+
         </div>
 
       </div>

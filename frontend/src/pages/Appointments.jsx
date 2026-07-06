@@ -1,32 +1,31 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
-import appointmentsData from "../data/appointments";
+import API from "../api/axios";
 
 function Appointments() {
-  const [appointmentTitle, setAppointmentTitle] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [appointmentTime, setAppointmentTime] = useState("");
-
   const [doctorName, setDoctorName] = useState("");
   const [hospital, setHospital] = useState("");
-  const [purpose, setPurpose] = useState("");
-
-  const [editIndex, setEditIndex] = useState(null);
+  const [department, setDepartment] = useState("");
+const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
-  const [appointments, setAppointments] = useState(() => {
-    const savedAppointments = localStorage.getItem("appointments");
+  const [appointments, setAppointments] = useState([]);
+  const [editingId, setEditingId] = useState(null);
 
-    return savedAppointments
-      ? JSON.parse(savedAppointments)
-      : appointmentsData;
-  });
+useEffect(() => {
+  const fetchAppointments = async () => {
+    try {
+      const res = await API.get("/appointments");
 
-  useEffect(() => {
-    localStorage.setItem(
-      "appointments",
-      JSON.stringify(appointments)
-    );
-  }, [appointments]);
+      setAppointments(res.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  fetchAppointments();
+}, []);
 
    useEffect(() => {
   if ("Notification" in window) {
@@ -54,8 +53,13 @@ useEffect(() => {
         new Notification("📅 ElderEase AI", {
           body: `Appointment with Dr. ${appointment.doctorName} in ${Math.ceil(diffMinutes)} minutes.`,
         })
-        appointment.reminderSent = true;
-        setAppointments([...appointments]);;
+       setAppointments((prev) =>
+  prev.map((item) =>
+    item._id === appointment._id
+      ? { ...item, reminderSent: true }
+      : item
+  )
+);
       }
     });
   }, 60000);
@@ -63,103 +67,126 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, [appointments]);
 
-  const addAppointment = () => {
-    if (
-      !doctorName ||
-      !hospital ||
-      !appointmentTitle ||
-      !appointmentDate ||
-      !appointmentTime ||
-      !purpose
-    ) {
-      alert("Please fill all fields");
-      return;
-    }
+const addAppointment = async () => {
+  if (
+    !doctorName ||
+    !hospital ||
+    !department ||
+    !appointmentDate ||
+    !appointmentTime
+  ) {
+    alert("Please fill all required fields");
+    return;
+  }
 
-    const newAppointment = {
-  doctorName,
-  hospital,
-  title: appointmentTitle,
-  purpose,
-  date: appointmentDate,
-  time: appointmentTime,
-  completed: false,
-  reminderSent: false,
-};
+  try {
+   if (editingId) {
+  const res = await API.put(`/appointments/${editingId}`, {
+    doctorName,
+    hospital,
+    department,
+    date: appointmentDate,
+    time: appointmentTime,
+    notes,
+  });
 
-    if (editIndex !== null) {
-      const updatedAppointments = [...appointments];
-      updatedAppointments[editIndex] = newAppointment;
+  setAppointments((prev) =>
+    prev.map((appointment) =>
+      appointment._id === editingId ? res.data : appointment
+    )
+  );
 
-      setAppointments(updatedAppointments);
+  updateActivity(
+    `✏️ Updated appointment with ${doctorName}`
+  );
 
-updateActivity(
-  `✅ Completed appointment with ${updatedAppointments[index].doctorName}`
-);
+  setEditingId(null);
+} else {
+  const res = await API.post("/appointments", {
+    doctorName,
+    hospital,
+    department,
+    date: appointmentDate,
+    time: appointmentTime,
+    notes,
+  });
 
-updateActivity(
-  `➕ Added appointment with ${doctorName}`
-);
+  setAppointments((prev) => [res.data, ...prev]);
 
-updateActivity(
-  `✏ Updated appointment with ${doctorName}`
-);
+  updateActivity(
+    `➕ Added appointment with ${doctorName}`
+  );
+}
 
-      setEditIndex(null);
-    } else {
-      setAppointments([
-        ...appointments,
-        newAppointment,
-      ]);
-    }
-
+    // Clear form
     setDoctorName("");
     setHospital("");
-    setAppointmentTitle("");
-    setPurpose("");
+    setDepartment("");
+    setNotes("");
     setAppointmentDate("");
     setAppointmentTime("");
-  };
+    setEditingId(null);
 
-  const editAppointment = (index) => {
-    const appointment = appointments[index];
+  } catch (error) {
+    console.error(error);
 
-    setDoctorName(appointment.doctorName);
-    setHospital(appointment.hospital);
-    setAppointmentTitle(appointment.title);
-    setPurpose(appointment.purpose);
-    setAppointmentDate(appointment.date);
-    setAppointmentTime(appointment.time);
+    alert(
+      error.response?.data?.message ||
+      "Failed to add appointment."
+    );
+  }
+};
 
-    setEditIndex(index);
-  };
+ const editAppointment = (appointment) => {
 
-  const deleteAppointment = (index) => {
-    const updatedAppointments =
-      appointments.filter((_, i) => i !== index);
-      updateActivity(
-  `🗑 Deleted appointment with ${appointments[index].doctorName}`
-);
+  setDoctorName(appointment.doctorName);
+  setHospital(appointment.hospital);
+  setDepartment(appointment.department);
+  setNotes(appointment.notes || "");
+  setAppointmentDate(appointment.date);
+  setAppointmentTime(appointment.time);
 
-    setAppointments(updatedAppointments);
+  setEditingId(appointment._id);
+};
 
-    if (editIndex === index) {
-      setEditIndex(null);
-      setDoctorName("");
-      setHospital("");
-      setAppointmentTitle("");
-      setPurpose("");
-      setAppointmentDate("");
-      setAppointmentTime("");
-    }
-  };
+const deleteAppointment = async (id, doctorName) => {
+  try {
+    await API.delete(`/appointments/${id}`);
 
-  const completeAppointment = (index) => {
-  const updatedAppointments = [...appointments];
+    setAppointments((prev) =>
+      prev.filter((appointment) => appointment._id !== id)
+    );
 
-  updatedAppointments[index].completed = true;
+    updateActivity(`🗑 Deleted appointment with ${doctorName}`);
+  } catch (error) {
+    console.error(error);
 
-  setAppointments(updatedAppointments);
+    alert(
+      error.response?.data?.message ||
+      "Failed to delete appointment."
+    );
+  }
+};
+
+const completeAppointment = async (appointment) => {
+  try {
+    const res = await API.put(`/appointments/${appointment._id}`, {
+      status: "Completed",
+    });
+
+    setAppointments((prev) =>
+      prev.map((item) =>
+        item._id === appointment._id ? res.data : item
+      )
+    );
+
+    updateActivity(
+      `✅ Completed appointment with ${appointment.doctorName}`
+    );
+  } catch (error) {
+    console.error(error);
+    alert("Failed to complete appointment.");
+  }
 };
 
 const updateActivity = (message) => {
@@ -207,9 +234,9 @@ const updateActivity = (message) => {
 
   <input
     type="text"
-    placeholder="Appointment Title"
-    value={appointmentTitle}
-    onChange={(e) => setAppointmentTitle(e.target.value)}
+   placeholder="Department"
+value={department}
+onChange={(e) => setDepartment(e.target.value)}
   />
 
   <input
@@ -226,9 +253,9 @@ const updateActivity = (message) => {
 
   <input
     type="text"
-    placeholder="Purpose"
-    value={purpose}
-    onChange={(e) => setPurpose(e.target.value)}
+  placeholder="Notes"
+   value={notes}
+onChange={(e) => setNotes(e.target.value)}
   />
 
 </div>
@@ -238,9 +265,9 @@ const updateActivity = (message) => {
     className="add-btn"
     onClick={addAppointment}
   >
-    {editIndex !== null
-      ? "Update Appointment"
-      : "Add Appointment"}
+    {editingId
+  ? "Update Appointment"
+  : "Add Appointment"}
   </button>
 </div>
 
@@ -262,13 +289,13 @@ const updateActivity = (message) => {
           ) : (
            appointments
 .filter((appointment) =>
-  `${appointment.doctorName || ""} ${appointment.title || ""}`
+ `${appointment.doctorName || ""} ${appointment.department || ""}`
     .toLowerCase()
     .includes(search.toLowerCase())
 )
   .map((appointment, index) => ( 
               <div
-                key={index}
+                key={appointment._id}
                 className="appointment-card"
               >
 
@@ -276,9 +303,9 @@ const updateActivity = (message) => {
 
                 <p>🏥 {appointment.hospital}</p>
 
-                <p>📝 {appointment.title}</p>
+               <p>📝 {appointment.department}</p>
 
-                <p>📌 {appointment.purpose}</p>
+               <p>📌 {appointment.notes}</p>
 
                 <p>📅 {appointment.date}</p>
 
@@ -288,9 +315,7 @@ const updateActivity = (message) => {
 
                   <button
                     className="edit-btn"
-                    onClick={() =>
-                      editAppointment(index)
-                    }
+                    onClick={() => editAppointment(appointment)}
                   >
                     ✏ Edit
                   </button>
@@ -298,16 +323,19 @@ const updateActivity = (message) => {
                   <button
                     className="delete-btn"
                     onClick={() =>
-                      deleteAppointment(index)
-                    }
+  deleteAppointment(
+    appointment._id,
+    appointment.doctorName
+  )
+}
                   >
                     🗑 Delete
                   </button>
 
-                  {!appointment.completed ? (
+                  {appointment.status !== "Completed" ? (
   <button
     className="complete-btn"
-    onClick={() => completeAppointment(index)}
+   onClick={() => completeAppointment(appointment)}
   >
     ✔ Complete
   </button>

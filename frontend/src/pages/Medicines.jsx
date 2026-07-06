@@ -3,7 +3,6 @@ import API from "../api/axios";
 import Sidebar from "../components/Sidebar";
 import MedicineList from "../components/MedicineList";
 
-
 function Medicines() {
 
   const [medicineName, setMedicineName] = useState("");
@@ -75,7 +74,7 @@ const editMedicine = (index) => {
 };
 
 
-const markAsTaken = (index) => {
+const markAsTaken = async (index) => {
 
   const updatedMedicines = [...medicines];
 
@@ -95,8 +94,14 @@ const markAsTaken = (index) => {
     return;
   }
 
-  // Count this dose
+  
   updatedMedicines[index].takenCount++;
+  if (
+  updatedMedicines[index].takenCount >=
+  updatedMedicines[index].timesPerDay
+) {
+  updatedMedicines[index].status = "Completed";
+}
 
   // Reduce stock
   if (updatedMedicines[index].quantity > 0) {
@@ -127,11 +132,22 @@ const markAsTaken = (index) => {
     );
   }
 
-  setMedicines(updatedMedicines);
+ try {
+  await API.put(
+    `/medicines/${updatedMedicines[index]._id}`,
+    updatedMedicines[index]
+  );
+
+  fetchMedicines();
 
   updateActivity(
     `✔ Took ${updatedMedicines[index].name} (${updatedMedicines[index].takenCount}/${updatedMedicines[index].timesPerDay})`
   );
+
+} catch (error) {
+  console.error(error);
+  alert("Failed to update medicine.");
+}
 };
 
 const refillMedicine = (index) => {
@@ -149,12 +165,6 @@ const refillMedicine = (index) => {
 
 const [search, setSearch] = useState("");
 
-  // useEffect(() => {
-  //   localStorage.setItem(
-  //     "medicines",
-  //     JSON.stringify(medicines)
-  //   );
-  // }, [medicines]);
 
 useEffect(() => {
   if ("Notification" in window) {

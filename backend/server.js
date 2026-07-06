@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const { protect } = require("./middleware/authMiddleware");
 const medicineRoutes = require("./routes/medicineRoutes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/medicines", medicineRoutes);
+app.use("/api/appointments", appointmentRoutes);
 
 
 const PORT = process.env.PORT || 5000;
