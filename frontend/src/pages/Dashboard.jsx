@@ -35,10 +35,15 @@ const [appointments, setAppointments] = useState([]);
 useEffect(() => {
   const fetchDashboardData = async () => {
     try {
-      const [medicineRes, appointmentRes] = await Promise.all([
-        API.get("/medicines"),
-        API.get("/appointments"),
-      ]);
+     const [medicineRes, appointmentRes, reminderRes] = await Promise.all([
+  API.get("/medicines"),
+  API.get("/appointments"),
+  API.get("/medicines/reminders"),
+]);
+
+setMedicines(medicineRes.data);
+setAppointments(appointmentRes.data);
+setReminders(reminderRes.data);
 
       setMedicines(medicineRes.data);
       setAppointments(appointmentRes.data);
@@ -70,6 +75,7 @@ useEffect(() => {
 }, []);
 
 const [medicines, setMedicines] = useState([]);
+const [reminders, setReminders] = useState([]);
 
 const remainingMedicines = medicines.filter(
   (medicine) => medicine.status !== "Completed"
@@ -204,42 +210,45 @@ if (currentHour >= 5 && currentHour < 12) {
 Take your medicines on time for better health.
 </p>
 
-    {medicines.length === 0 ? (
+{reminders.length === 0 ? (
 
-      <p>No medicines added yet.</p>
+  <p>No medicines added yet.</p>
 
-    ) : (
+) : (
 
-      medicines.slice(0,4).map((medicine,index)=>(
+  reminders.slice(0, 4).map((medicine) => (
 
-       <div className="medicine-row" key={medicine._id}>
+    <div className="medicine-row" key={medicine._id}>
 
-  <div className="medicine-info">
+      <div className="medicine-info">
 
-    <div className="medicine-icon">
-      💊
+        <div className="medicine-icon">
+          💊
+        </div>
+
+        <div>
+          <h4>{medicine.name}</h4>
+
+          <p>
+            {medicine.status === "Due"
+              ? "🔴 Due"
+              : medicine.status === "Taken"
+              ? "🟢 Taken"
+              : "🟡 Upcoming"}
+          </p>
+        </div>
+
+      </div>
+
+      <span className="time-badge">
+        🕒 {medicine.time}
+      </span>
+
     </div>
 
-    <div>
+  ))
 
-      <h4>{medicine.name}</h4>
-
-      <p>{medicine.dosage}</p>
-
-    </div>
-
-  </div>
-
-  <span className="time-badge">
-    🕒 {medicine.time}
-  </span>
-
-</div>
-
-      ))
-
-    )}
-
+)}
   </div>
 
 
