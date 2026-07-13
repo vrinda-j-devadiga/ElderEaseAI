@@ -1,13 +1,15 @@
-const authRoutes = require("./routes/authRoutes");
+const dotenv = require("dotenv");
+dotenv.config();
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const connectDB = require("./config/db");
-const { protect } = require("./middleware/authMiddleware");
+
+const authRoutes = require("./routes/authRoutes");
 const medicineRoutes = require("./routes/medicineRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
-
-dotenv.config();
+const userRoutes = require("./routes/userRoutes");
+const chatRoutes = require("./routes/chatRoutes");
+const { protect } = require("./middleware/authMiddleware");
 
 connectDB();
 
@@ -15,10 +17,12 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
 app.use("/api/auth", authRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use("/api/appointments", appointmentRoutes);
-
+app.use("/api/users", userRoutes);
+app.use("/api/chat", chatRoutes); 
 
 const PORT = process.env.PORT || 5000;
 

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
-import genAI from "../config/gemini";
 import ReactMarkdown from "react-markdown";
 
 function AIAssistant() {
@@ -8,36 +7,37 @@ function AIAssistant() {
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const askAI = async () => {
-    if (!question.trim()) return;
+const askAI = async () => {
+  if (!question.trim()) return;
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-      });
+  try {
+    const res = await fetch("http://localhost:5000/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: question,
+      }),
+    });
 
-      const result = await model.generateContent(
-        `You are ElderEase AI, a healthcare assistant.
-Give short, simple and helpful health advice.
-Question: ${question}`
-      );
+    const data = await res.json();
 
-      const text = result.response.text();
-
-      setResponse(text);
-    } catch (error) {
-      console.log(error);
-
-      setResponse(
-        "Unable to connect to Gemini AI."
-      );
+    if (res.ok) {
+      setResponse(data.reply);
+    } else {
+      setResponse(data.error || "Unable to get AI response.");
     }
+  } catch (error) {
+    console.error(error);
+    setResponse("Server connection failed.");
+  }
 
-    setLoading(false);
-    setQuestion("");
-  };
+  setLoading(false);
+  setQuestion("");
+};
 
   return (
     <div className="dashboard">

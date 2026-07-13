@@ -5,18 +5,21 @@ import API from "../api/axios";
 function Statistics() {
 const [medicines, setMedicines] = useState([]);
 const [appointments, setAppointments] = useState([]);
+const [profile, setProfile] = useState({});
 
 useEffect(() => {
   const fetchStatistics = async () => {
     try {
-      const [medicineRes, appointmentRes] =
+      const [medicineRes, appointmentRes, profileRes] =
         await Promise.all([
           API.get("/medicines"),
           API.get("/appointments"),
+          API.get("/users/profile"),
         ]);
 
       setMedicines(medicineRes.data);
       setAppointments(appointmentRes.data);
+      setProfile(profileRes.data);
 
     } catch (error) {
       console.error(
@@ -28,9 +31,6 @@ useEffect(() => {
 
   fetchStatistics();
 }, []);
-
-const user =
-  JSON.parse(localStorage.getItem("user")) || {};
 
   const totalMedicines = medicines.length;
 
@@ -107,31 +107,30 @@ const upcomingAppointments =
 
         </div>
 
-        <div className="section-card">
-          <h2>👤 Profile Summary</h2>
+       <div className="section-card">
+  <h2>👤 Profile Summary</h2>
 
-       <p>
-  👤 <strong>Name:</strong> {user.name || "Not Added"}
-</p>
+  <p>
+    👤 <strong>Name:</strong> {profile.name || "Not Added"}
+  </p>
 
-<p>
-  📧 <strong>Email:</strong> {user.email || "-"}
-</p>
+  <p>
+    📧 <strong>Email:</strong> {profile.email || "-"}
+  </p>
 
-<p>
-  🎂 <strong>Age:</strong> -
-</p>
+  <p>
+    🎂 <strong>Age:</strong> {profile.age || "-"} Years
+  </p>
 
-<p>
-  🩸 <strong>Blood Group:</strong> -
-</p>
+  <p>
+    🩸 <strong>Blood Group:</strong> {profile.bloodGroup || "-"}
+  </p>
 
-<p>
-  ⚖️ <strong>Weight:</strong> -
-</p>
+  <p>
+    ⚖️ <strong>Weight:</strong> {profile.weight || "-"} kg
+  </p>
 
-        </div>
-
+</div>
       </div>
     </div>
   );

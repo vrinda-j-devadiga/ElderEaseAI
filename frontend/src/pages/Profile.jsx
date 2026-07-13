@@ -1,29 +1,42 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
+import API from "../api/axios";
 
 function Profile() {
-  const [profile, setProfile] = useState(() => {
-    return (
-      JSON.parse(localStorage.getItem("profile")) || {
-        fullName: "",
-        age: "",
-        gender: "",
-        bloodGroup: "",
-        height: "",
-        weight: "",
-        emergencyContact: "",
-        allergies: "",
-        medicalConditions: "",
-      }
-    );
-  });
+  const [profile, setProfile] = useState({
+  name: "",
+  age: "",
+  gender: "",
+  bloodGroup: "",
+  height: "",
+  weight: "",
+  emergencyContact: "",
+  medicalConditions: "",
+});
 
-  useEffect(() => {
-    localStorage.setItem(
-      "profile",
-      JSON.stringify(profile)
-    );
-  }, [profile]);
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const res = await API.get("/users/profile");
+
+      setProfile({
+        name: res.data.name || "",
+        age: res.data.age || "",
+        gender: res.data.gender || "",
+        bloodGroup: res.data.bloodGroup || "",
+        height: res.data.height || "",
+        weight: res.data.weight || "",
+        emergencyContact: res.data.emergencyContact || "",
+        medicalConditions: res.data.medicalConditions || "",
+      });
+
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+    }
+  };
+
+  fetchProfile();
+}, []);
 
   const handleChange = (e) => {
     setProfile({
@@ -31,6 +44,33 @@ function Profile() {
       [e.target.name]: e.target.value,
     });
   };
+
+  const saveProfile = async () => {
+    console.log(profile);
+  try {
+    await API.put("/users/profile", profile);
+
+    alert("Profile Updated Successfully!");
+
+    const user =
+      JSON.parse(localStorage.getItem("user")) || {};
+
+    user.name = profile.name;
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify(user)
+    );
+
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      error.response?.data?.message ||
+      "Failed to update profile."
+    );
+  }
+};
 
   return (
     <div className="dashboard">
@@ -50,12 +90,12 @@ function Profile() {
            <div className="profile-field">
   <label>Full Name</label>
   <input
-    type="text"
-    name="fullName"
-    placeholder="Full Name"
-    value={profile.fullName}
-    onChange={handleChange}
-  />
+  type="text"
+  name="name"
+  placeholder="Full Name"
+  value={profile.name}
+  onChange={handleChange}
+/>
 </div>
 
             <div className="profile-field">
@@ -143,7 +183,7 @@ function Profile() {
   <div className="profile-btn">
   <button
     className="save-profile-btn"
-    onClick={() => alert("Profile Saved Successfully!")}
+    onClick={saveProfile}
   >
     💾 Save Profile
   </button>
