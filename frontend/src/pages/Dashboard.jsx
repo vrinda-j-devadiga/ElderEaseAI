@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import healthTips from "../data/healthTips";
+import healthTips from "../data/HealthTips";
 import HealthTips from "../components/HealthTips";
 import API from "../api/axios";
 
